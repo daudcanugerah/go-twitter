@@ -229,18 +229,18 @@ func (c *Client) UserNameLookup(ctx context.Context, usernames []string, opts Us
 }
 
 // TweetRecentSearch will return a recent search based of a query
-func (c *Client) TweetRecentSearch(ctx context.Context, query string, opts TweetRecentSearchOpts) (*TweetRecentSearchResponse, error) {
+func (c *Client) TweetRecentSearch(ctx context.Context, query string, opts TweetRecentSearchOpts) (*TweetRecentSearchResponse, *http.Response, error) {
 	switch {
 	case len(query) == 0:
-		return nil, fmt.Errorf("tweet recent search: a query is required: %w", ErrParameter)
+		return nil, nil, fmt.Errorf("tweet recent search: a query is required: %w", ErrParameter)
 	case len(query) > tweetRecentSearchQueryLength:
-		return nil, fmt.Errorf("tweet recent search: the query over the length (%d): %w", tweetRecentSearchQueryLength, ErrParameter)
+		return nil, nil, fmt.Errorf("tweet recent search: the query over the length (%d): %w", tweetRecentSearchQueryLength, ErrParameter)
 	default:
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tweetRecentSearchEndpoint.url(c.Host), nil)
 	if err != nil {
-		return nil, fmt.Errorf("tweet recent search request: %w", err)
+		return nil, nil, fmt.Errorf("tweet recent search request: %w", err)
 	}
 	req.Header.Add("Accept", "application/json")
 	c.Authorizer.Add(req)
@@ -251,25 +251,25 @@ func (c *Client) TweetRecentSearch(ctx context.Context, query string, opts Tweet
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("tweet recent search response: %w", err)
+		return nil, nil, fmt.Errorf("tweet recent search response: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("tweet recent search response read: %w", err)
+		return nil, nil, fmt.Errorf("tweet recent search response read: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		e := &ErrorResponse{}
 		if err := json.Unmarshal(respBytes, e); err != nil {
-			return nil, &HTTPError{
+			return nil, nil, &HTTPError{
 				Status:     resp.Status,
 				StatusCode: resp.StatusCode,
 				URL:        resp.Request.URL.String(),
 			}
 		}
 		e.StatusCode = resp.StatusCode
-		return nil, e
+		return nil, nil, e
 	}
 
 	recentSearch := &TweetRecentSearchResponse{
@@ -278,14 +278,14 @@ func (c *Client) TweetRecentSearch(ctx context.Context, query string, opts Tweet
 	}
 
 	if err := json.Unmarshal(respBytes, recentSearch.Raw); err != nil {
-		return nil, fmt.Errorf("tweet recent search raw response error decode: %w", err)
+		return nil, nil, fmt.Errorf("tweet recent search raw response error decode: %w", err)
 	}
 
 	if err := json.Unmarshal(respBytes, recentSearch); err != nil {
-		return nil, fmt.Errorf("tweet recent search meta response error decode: %w", err)
+		return nil, nil, fmt.Errorf("tweet recent search meta response error decode: %w", err)
 	}
 
-	return recentSearch, nil
+	return recentSearch, resp, nil
 }
 
 // UserFollowingLookup will return a user's following users
