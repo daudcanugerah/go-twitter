@@ -388,7 +388,7 @@ func TestClient_TweetRecentSearch(t *testing.T) {
 				Client:     tt.fields.Client,
 				Host:       tt.fields.Host,
 			}
-			got, err := c.TweetRecentSearch(context.Background(), tt.args.query, tt.args.opts)
+			_, got, err := c.TweetRecentSearch(context.Background(), tt.args.query, tt.args.opts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Client.TweetRecentSearch() error = %v, wantErr %v", err, tt.wantErr)
 				return

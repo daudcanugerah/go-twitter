@@ -399,16 +399,16 @@ func (c *Client) UserFollowersLookup(ctx context.Context, id string, opts UserFo
 }
 
 // UserTweetTimeline will return the user tweet timeline
-func (c *Client) UserTweetTimeline(ctx context.Context, userID string, opts UserTweetTimelineOpts) (*UserTweetTimelineResponse, error) {
+func (c *Client) UserTweetTimeline(ctx context.Context, userID string, opts UserTweetTimelineOpts) (*http.Response, *UserTweetTimelineResponse, error) {
 	switch {
 	case len(userID) == 0:
-		return nil, fmt.Errorf("user tweet timeline: a query is required: %w", ErrParameter)
+		return nil, nil, fmt.Errorf("user tweet timeline: a query is required: %w", ErrParameter)
 	default:
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userTweetTimelineEndpoint.urlID(c.Host, userID), nil)
 	if err != nil {
-		return nil, fmt.Errorf("user tweet timeline request: %w", err)
+		return nil, nil, fmt.Errorf("user tweet timeline request: %w", err)
 	}
 	req.Header.Add("Accept", "application/json")
 	c.Authorizer.Add(req)
@@ -416,25 +416,25 @@ func (c *Client) UserTweetTimeline(ctx context.Context, userID string, opts User
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("user tweet timeline response: %w", err)
+		return resp, nil, fmt.Errorf("user tweet timeline response: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("user tweet timeline response read: %w", err)
+		return resp, nil, fmt.Errorf("user tweet timeline response read: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		e := &ErrorResponse{}
 		if err := json.Unmarshal(respBytes, e); err != nil {
-			return nil, &HTTPError{
+			return resp, nil, &HTTPError{
 				Status:     resp.Status,
 				StatusCode: resp.StatusCode,
 				URL:        resp.Request.URL.String(),
 			}
 		}
 		e.StatusCode = resp.StatusCode
-		return nil, e
+		return resp, nil, e
 	}
 
 	timeline := &UserTweetTimelineResponse{
@@ -443,14 +443,14 @@ func (c *Client) UserTweetTimeline(ctx context.Context, userID string, opts User
 	}
 
 	if err := json.Unmarshal(respBytes, timeline.Raw); err != nil {
-		return nil, fmt.Errorf("user tweet timeline raw response error decode: %w", err)
+		return resp, nil, fmt.Errorf("user tweet timeline raw response error decode: %w", err)
 	}
 
 	if err := json.Unmarshal(respBytes, timeline); err != nil {
-		return nil, fmt.Errorf("user tweet timeline meta response error decode: %w", err)
+		return resp, nil, fmt.Errorf("user tweet timeline meta response error decode: %w", err)
 	}
 
-	return timeline, nil
+	return resp, timeline, nil
 }
 
 // UserMentionTimeline will return the user's mentions timeline

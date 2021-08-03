@@ -269,7 +269,7 @@ func TestClient_UserTweetTimeline(t *testing.T) {
 				Client:     tt.fields.Client,
 				Host:       tt.fields.Host,
 			}
-			got, err := c.UserTweetTimeline(context.Background(), tt.args.userID, tt.args.opts)
+			_, got, err := c.UserTweetTimeline(context.Background(), tt.args.userID, tt.args.opts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Client.UserTweetTimeline() error = %v, wantErr %v", err, tt.wantErr)
 				return
